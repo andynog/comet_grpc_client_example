@@ -29,7 +29,7 @@ func main() {
 	fmt.Printf("VERSION SERVICE => P2P: %d | Block: %d | ABCI: %s | Node: %s\n", version.P2P, version.Block, version.ABCI, version.Node)
 
 	//// Get Block
-	block, err := conn.GetBlock(ctx, 2)
+	block, err := conn.GetBlockByHeight(ctx, -10)
 	if err != nil {
 		fmt.Printf("error getting block: %v\n", err)
 		st := status.Convert(err)
