@@ -61,15 +61,22 @@ func main() {
 
 	gRPCClient := blocksvc.NewBlockServiceClient(gRPCConn)
 	req := blocksvc.GetLatestHeightRequest{}
-	stream, err := gRPCClient.GetLatestHeight(context.Background(), &req)
+	gCtx, cancel := context.WithCancel(context.Background())
+	stream, err := gRPCClient.GetLatestHeight(gCtx, &req)
+	count := 0
 	for {
 		height, err := stream.Recv()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			log.Fatalf("%v.GetLatestHeight(_) = _, %v", gRPCClient, err)
+			log.Fatalf("error receiving new block: %v", err)
 		}
 		log.Println("New Block:", height)
+		count++
+		if count > 15 {
+			cancel()
+			log.Println("Cancelled stream context")
+		}
 	}
 }
