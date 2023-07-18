@@ -3,15 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
-	"log"
 	"time"
 
 	"github.com/cometbft/cometbft/libs/os"
-	blocksvc "github.com/cometbft/cometbft/proto/tendermint/services/block/v1"
 	client "github.com/cometbft/cometbft/rpc/grpc/client"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
 )
 
@@ -50,33 +46,22 @@ func main() {
 	}
 	fmt.Println("BLOCK SERVICE =>", block.Block.String())
 
-	//// Get Latest Height
-	var opts []grpc.DialOption
-	opts = append(opts, grpc.WithInsecure())
-	gRPCConn, err := grpc.Dial("0.0.0.0:8080", opts...)
-	if err != nil {
-		log.Fatalf("fail to dial: %v", err)
-	}
-	defer gRPCConn.Close()
-
-	gRPCClient := blocksvc.NewBlockServiceClient(gRPCConn)
-	req := blocksvc.GetLatestHeightRequest{}
 	gCtx, cancel := context.WithCancel(context.Background())
-	stream, err := gRPCClient.GetLatestHeight(gCtx, &req)
+	ch := make(chan int64)
+	err = conn.GetBlockLatestHeight(gCtx, ch)
+	if err != nil {
+		fmt.Println("Error getting latest height:", err)
+	}
 	count := 0
+
 	for {
-		height, err := stream.Recv()
-		if err == io.EOF {
+		h := <-ch
+		fmt.Println("New block at height:", h)
+		count++
+		if count > 5 {
 			break
 		}
-		if err != nil {
-			log.Fatalf("error receiving new block: %v", err)
-		}
-		log.Println("New Block:", height)
-		count++
-		if count > 15 {
-			cancel()
-			log.Println("Cancelled stream context")
-		}
 	}
+
+	os.Exit("finished receiving new blocks")
 }
