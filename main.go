@@ -16,6 +16,7 @@ func main() {
 	defer cancel()
 	grpcURI := "0.0.0.0:8080"
 	conn, err := client.New(ctx, grpcURI, client.WithVersionServiceEnabled(true), client.WithInsecure())
+	defer conn.Close()
 	if err != nil {
 		fmt.Printf("error new client: %v\n", err)
 	}
