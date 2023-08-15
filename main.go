@@ -46,17 +46,38 @@ func main() {
 	}
 	fmt.Println("BLOCK SERVICE =>", block.Block.String())
 
+	//// Get Block
+	blockResults, err := conn.GetBlockResults(ctx, 9)
+	if err != nil {
+		fmt.Printf("error getting block results: %v\n", err)
+		st := status.Convert(err)
+		for _, detail := range st.Details() {
+			switch t := detail.(type) {
+			case *errdetails.BadRequest:
+				for _, violation := range t.GetFieldViolations() {
+					fmt.Printf("The problem with %q field:\n", violation.GetField())
+					fmt.Printf("\t%s\n", violation.GetDescription())
+				}
+			}
+		}
+		os.Exit("aborting...")
+	}
+	fmt.Println("BLOCK RESULTS SERVICE =>", blockResults.Height, blockResults.ValidatorUpdates, blockResults.FinalizeBlockEvents, blockResults.AppHash)
+
 	gCtx, cancel := context.WithCancel(context.Background())
-	ch := make(chan int64)
-	err = conn.GetBlockLatestHeight(gCtx, ch)
+	ch, err := conn.GetLatestHeight(gCtx)
 	if err != nil {
 		fmt.Println("Error getting latest height:", err)
 	}
 	count := 0
 
 	for {
-		h := <-ch
-		fmt.Println("New block at height:", h)
+		result := <-ch
+		if result.Error != nil {
+			fmt.Println("Error on new block:", result.Error)
+		} else {
+			fmt.Println("New block at height:", result.Height)
+		}
 		count++
 		if count > 5 {
 			break
